@@ -28,6 +28,7 @@ class TimeRunnerBuilder : public RunnerBuilder
         TimeRunnerBuilder &setRequests(size_t val);
         TimeRunnerBuilder &setTimeLimit(double val);
         TimeRunnerBuilder &setTimeStep(double val);
+        TimeRunnerBuilder &setTimeRequestModifier(std::shared_ptr<TimeRequestModifier> val);
 
         TimeRunnerBuilder &registerModelCreator(std::shared_ptr<TimeModelCreator> creator);
 
@@ -36,11 +37,16 @@ class TimeRunnerBuilder : public RunnerBuilder
         size_t requests = 0;
         double time_limit = 0;
         double step = 0;
+        std::shared_ptr<TimeRequestModifier> modifier;
         std::list<std::shared_ptr<TimeModel>> models;
         std::list<std::shared_ptr<TimeModelCreator>> creators;
 };
 
-using RandomMap = std::unordered_map<std::string, std::shared_ptr<Random>>;
+namespace TimeRunnerBuilderMisc
+{
+    using RandomMap = std::unordered_map<std::string, std::shared_ptr<Random>>;
+    using RedirectMap = std::unordered_map<std::string, GateTimeModel::RedirectFunc>;
+}
 
 // Creators
 
@@ -63,17 +69,25 @@ class BufferTimeModelCreator : public TimeModelCreator
 class GeneratorTimeModelCreator : public TimeModelCreator
 {
     public:
-        GeneratorTimeModelCreator(RandomMap random);
+        using RandomMap = TimeRunnerBuilderMisc::RandomMap;
+
+    public:
+        GeneratorTimeModelCreator(RandomMap random,
+                                  std::shared_ptr<RequestCreator> creator);
         virtual ~GeneratorTimeModelCreator(void) override = default;
         virtual bool check(std::shared_ptr<Model> model) const override;
         virtual std::shared_ptr<TimeModel> create(std::shared_ptr<Model> model) const override;
 
     private:
         RandomMap map;
+        std::shared_ptr<RequestCreator> creator;
 };
 
 class ProcessorTimeModelCreator : public TimeModelCreator
 {
+    public:
+        using RandomMap = TimeRunnerBuilderMisc::RandomMap;
+
     public:
         ProcessorTimeModelCreator(RandomMap random);
         virtual ~ProcessorTimeModelCreator(void) override = default;
@@ -95,7 +109,7 @@ class TerminatorTimeModelCreator : public TimeModelCreator
 class GateTimeModelCreator : public TimeModelCreator
 {
     public:
-        using RedirectMap = std::unordered_map<std::string, GateTimeModel::RedirectFunc>;
+        using RedirectMap = TimeRunnerBuilderMisc::RedirectMap;
 
     public:
         GateTimeModelCreator(RedirectMap map);
@@ -105,6 +119,18 @@ class GateTimeModelCreator : public TimeModelCreator
 
     private:
         RedirectMap map;
+};
+
+class StatisticsBlockTimeModelCreator : public TimeModelCreator
+{
+    public:
+        StatisticsBlockTimeModelCreator(size_t interval);
+        virtual ~StatisticsBlockTimeModelCreator(void) override = default;
+        virtual bool check(std::shared_ptr<Model> model) const override;
+        virtual std::shared_ptr<TimeModel> create(std::shared_ptr<Model> model) const override;
+
+    private:
+        const size_t interval;
 };
 
 #endif

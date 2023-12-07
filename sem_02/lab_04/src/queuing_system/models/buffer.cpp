@@ -3,10 +3,7 @@
 Buffer::Buffer(std::string name, const size_t size,
                std::shared_ptr<Pipe> inpipe, std::shared_ptr<Pipe> outpipe)
     : Model(name), Sender(outpipe), Receiver(inpipe), size(size)
-{
-    if (0 == size)
-        throw;
-}
+{}
 
 size_t Buffer::read(void)
 {
@@ -14,7 +11,7 @@ size_t Buffer::read(void)
     std::shared_ptr<Pipe> inpipe = this->inpipe();
     size_t count = 0;
 
-    if (this->size == this->memory.size())
+    if (0 != this->size && this->size == this->memory.size())
         return count;
 
     for (std::shared_ptr<Request> current = inpipe->pop(); current;)
@@ -25,7 +22,7 @@ size_t Buffer::read(void)
         if (modifier)
             modifier->modify(current, *this, "read");
 
-        if (this->size == this->memory.size())
+        if (0 != this->size && this->size == this->memory.size())
             current = nullptr;
         else
             current = inpipe->pop();
@@ -61,6 +58,11 @@ size_t Buffer::send(size_t amount)
     this->mutex.unlock();
 
     return amount;
+}
+
+size_t Buffer::used(void) const
+{
+    return this->memory.size();
 }
 
 void Buffer::callback(void)

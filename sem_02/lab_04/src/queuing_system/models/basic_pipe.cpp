@@ -2,6 +2,11 @@
 
 BasicPipe::BasicPipe(std::string name) : Pipe(name) {}
 
+bool BasicPipe::empty(void) const
+{
+    return this->sets.empty() || this->sets.front().empty();
+}
+
 bool BasicPipe::push(std::shared_ptr<Request> request)
 {
     this->mutex.lock();

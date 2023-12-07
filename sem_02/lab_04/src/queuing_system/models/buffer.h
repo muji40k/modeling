@@ -18,6 +18,8 @@ class Buffer : public Model, public Sender, public Receiver
         virtual size_t read(void);
         virtual size_t send(size_t amount = 1);
 
+        virtual size_t used(void) const;
+
         virtual void callback(void) override;
 
     private:

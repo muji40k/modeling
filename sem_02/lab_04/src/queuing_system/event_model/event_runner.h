@@ -10,7 +10,8 @@ class EventRunner : public Runner
 {
     public:
         EventRunner(size_t requests, double time,
-                   std::list<std::shared_ptr<EventModel>> items);
+                    std::shared_ptr<EventRequestModifier> modifier,
+                    std::list<std::shared_ptr<EventModel>> items);
         virtual ~EventRunner(void) override = default;
 
         virtual void run(void) override;
@@ -18,6 +19,7 @@ class EventRunner : public Runner
     private:
         const size_t requests;
         const double end;
+        std::shared_ptr<EventRequestModifier> modifier;
         std::list<std::shared_ptr<EventModel>> items;
 };
 

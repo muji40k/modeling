@@ -1,6 +1,8 @@
 #ifndef _CHRONO_REQUEST_H_
 #define _CHRONO_REQUEST_H_
 
+#include <mutex>
+
 #include "base.h"
 #include "generator.h"
 
@@ -41,13 +43,14 @@ class ChronoRequestModifier : public RequestModifier
         const double *time = nullptr;
 };
 
-class ChronoModelRequestCreator : public RequestCreator
+class ChronoRequestCreator : public RequestCreator
 {
     public:
-        virtual ~ChronoModelRequestCreator(void) override = default;
+        virtual ~ChronoRequestCreator(void) override = default;
         virtual std::shared_ptr<Request> create(void) override;
 
     private:
+        std::mutex mutex;
         size_t current = 0;
 };
 

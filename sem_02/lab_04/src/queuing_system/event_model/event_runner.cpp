@@ -1,19 +1,30 @@
 #include "event_runner.h"
 
+#include <stdexcept>
+
 EventRunner::EventRunner(size_t requests, double time,
+                         std::shared_ptr<EventRequestModifier> modifier,
                          std::list<std::shared_ptr<EventModel>> items)
-    : requests(requests), end(time), items(items)
-{}
+    : requests(requests), end(time), modifier(modifier), items(items)
+{
+    if (nullptr == this->modifier)
+        throw std::logic_error("Nullptr modifier");
+
+    for (auto &item : items)
+        if (nullptr == item)
+            throw std::logic_error("Nullptr modifier");
+}
 
 void EventRunner::run(void)
 {
     double time = 0;
-    auto modifier = std::make_shared<EventRequestModifier>(time);
+    this->modifier->setTime(time);
+    auto modifier = this->modifier->getModifier();
 
     for (auto &item : this->items)
         item->setModifier(modifier);
 
-    while (this->end > time && this->requests > modifier->getPassed())
+    while (this->end > time && this->requests > this->modifier->getPassed())
     {
         auto iter = this->items.begin(), next = iter;
 

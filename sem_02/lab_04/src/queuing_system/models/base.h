@@ -44,6 +44,7 @@ class Pipe : public Model
         Pipe(std::string name);
         virtual ~Pipe(void) = default;
 
+        virtual bool empty(void) const = 0;
         virtual bool push(std::shared_ptr<Request>) = 0;
         virtual std::shared_ptr<Request> pop(void) = 0;
 

@@ -6,7 +6,8 @@ void TimeRunnerBuilder::create(void)
 {
     this->runner = std::make_shared<TimeRunner>(this->requests,
                                                 this->time_limit,
-                                                this->step, this->models);
+                                                this->step, this->modifier,
+                                                this->models);
 }
 
 std::shared_ptr<Runner> TimeRunnerBuilder::result(void)
@@ -31,6 +32,13 @@ TimeRunnerBuilder &TimeRunnerBuilder::setTimeLimit(double val)
 TimeRunnerBuilder &TimeRunnerBuilder::setTimeStep(double val)
 {
     this->step = val;
+
+    return *this;
+}
+
+TimeRunnerBuilder &TimeRunnerBuilder::setTimeRequestModifier(std::shared_ptr<TimeRequestModifier> val)
+{
+    this->modifier = val;
 
     return *this;
 }
@@ -84,9 +92,13 @@ std::shared_ptr<TimeModel> BufferTimeModelCreator::create(std::shared_ptr<Model>
 
 // ----------------------------------------------------------------------------
 
-GeneratorTimeModelCreator::GeneratorTimeModelCreator(RandomMap random)
-    : map(random)
-{}
+GeneratorTimeModelCreator::GeneratorTimeModelCreator(RandomMap random,
+                                                     std::shared_ptr<RequestCreator> creator)
+    : map(random), creator(creator)
+{
+    if (nullptr == creator)
+        throw;
+}
 
 bool GeneratorTimeModelCreator::check(std::shared_ptr<Model> model) const
 {
@@ -100,7 +112,7 @@ std::shared_ptr<TimeModel> GeneratorTimeModelCreator::create(std::shared_ptr<Mod
     if (this->map.end() == random)
         throw;
 
-    return std::make_shared<GeneratorTimeModel>(std::dynamic_pointer_cast<Generator>(model), (*random).second);
+    return std::make_shared<GeneratorTimeModel>(std::dynamic_pointer_cast<Generator>(model), this->creator, (*random).second);
 }
 
 // ----------------------------------------------------------------------------
@@ -155,5 +167,21 @@ std::shared_ptr<TimeModel> GateTimeModelCreator::create(std::shared_ptr<Model> m
         throw;
 
     return std::make_shared<GateTimeModel>(std::dynamic_pointer_cast<Gate>(model), (*func).second);
+}
+
+// ----------------------------------------------------------------------------
+
+StatisticsBlockTimeModelCreator::StatisticsBlockTimeModelCreator(size_t interval)
+    : interval(interval)
+{}
+
+bool StatisticsBlockTimeModelCreator::check(std::shared_ptr<Model> model) const
+{
+    return nullptr != std::dynamic_pointer_cast<StatatisticsBlock>(model);
+}
+
+std::shared_ptr<TimeModel> StatisticsBlockTimeModelCreator::create(std::shared_ptr<Model> model) const
+{
+    return std::make_shared<StatatisticsBlockTimeModel>(std::dynamic_pointer_cast<StatatisticsBlock>(model), this->interval);
 }
 

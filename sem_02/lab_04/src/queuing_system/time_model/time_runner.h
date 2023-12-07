@@ -10,6 +10,7 @@ class TimeRunner : public Runner
 {
     public:
         TimeRunner(size_t requests, double time, double step,
+                   std::shared_ptr<TimeRequestModifier> modifier,
                    std::list<std::shared_ptr<TimeModel>> items);
         virtual ~TimeRunner(void) override = default;
 
@@ -19,6 +20,7 @@ class TimeRunner : public Runner
         const size_t requests;
         const double end;
         const double step;
+        std::shared_ptr<TimeRequestModifier> modifier;
         std::map<size_t, std::list<std::shared_ptr<TimeModel>>> items;
 };
 

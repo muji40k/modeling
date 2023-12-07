@@ -13,6 +13,7 @@ class BasicPipe : public Pipe
         BasicPipe(std::string name);
         virtual ~BasicPipe(void) override = default;
 
+        virtual bool empty(void) const override;
         virtual bool push(std::shared_ptr<Request> request) override;
         virtual std::shared_ptr<Request> pop(void) override;
 

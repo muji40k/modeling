@@ -11,16 +11,7 @@
 #include "processor.h"
 #include "terminator.h"
 #include "gate.h"
-
-class TimeModelRequestCreator : public RequestCreator
-{
-    public:
-        virtual ~TimeModelRequestCreator(void) override = default;
-        virtual std::shared_ptr<Request> create(void) override;
-
-    private:
-        size_t current = 0;
-};
+#include "block_statistics.h"
 
 class PipeTimeModel : public TimeModel
 {
@@ -52,6 +43,7 @@ class GeneratorTimeModel : public TimeModel
 {
     public:
         GeneratorTimeModel(std::shared_ptr<Generator> generator,
+                           std::shared_ptr<RequestCreator> creator,
                            std::shared_ptr<Random> random);
         virtual ~GeneratorTimeModel(void) override = default;
         virtual size_t priority(void) override;
@@ -62,9 +54,6 @@ class GeneratorTimeModel : public TimeModel
         std::shared_ptr<Generator> generator;
         std::shared_ptr<Random> random;
         double next;
-
-    private:
-        static std::shared_ptr<TimeModelRequestCreator> creator;
 };
 
 class ProcessorTimeModel : public TimeModel
@@ -113,6 +102,22 @@ class GateTimeModel : public TimeModel
     private:
         std::shared_ptr<Gate> gate;
         RedirectFunc func;
+};
+
+class StatatisticsBlockTimeModel : public TimeModel
+{
+    public:
+        StatatisticsBlockTimeModel(std::shared_ptr<StatatisticsBlock> block,
+                                   double interval);
+        virtual ~StatatisticsBlockTimeModel(void) override = default;
+        virtual size_t priority(void) override;
+        virtual void tick(double time) override;
+        virtual void setModifier(std::shared_ptr<RequestModifier> modifier) override;
+
+    private:
+        std::shared_ptr<StatatisticsBlock> block;
+        double next;
+        const double interval;
 };
 
 #endif

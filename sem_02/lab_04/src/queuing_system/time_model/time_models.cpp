@@ -1,11 +1,6 @@
 #include "time_models.h"
 
-std::shared_ptr<Request> TimeModelRequestCreator::create(void)
-{
-    return std::make_shared<TimeRequest>(this->current++);
-}
-
-// Models
+#include <stdexcept>
 
 PipeTimeModel::PipeTimeModel(std::shared_ptr<Pipe> pipe)
     : pipe(pipe)
@@ -59,16 +54,15 @@ void BufferTimeModel::setModifier(std::shared_ptr<RequestModifier> modifier)
 
 // ---------------------------------------------------------------------------
 
-std::shared_ptr<TimeModelRequestCreator> GeneratorTimeModel::creator = std::make_shared<TimeModelRequestCreator>();
-
 GeneratorTimeModel::GeneratorTimeModel(std::shared_ptr<Generator> generator,
+                                       std::shared_ptr<RequestCreator> creator,
                                        std::shared_ptr<Random> random)
     : generator(generator), random(random)
 {
-    if (nullptr == generator || nullptr == random)
-        throw;
+    if (nullptr == generator || nullptr == random || nullptr == creator)
+        throw std::logic_error("Nullptr occured");
 
-    this->generator->setCreator(this->creator);
+    this->generator->setCreator(creator);
     this->next = this->random->generate();
 }
 
@@ -188,4 +182,31 @@ void GateTimeModel::setModifier(std::shared_ptr<RequestModifier> modifier)
 {
     this->gate->setModifier(modifier);
 }
+
+// ---------------------------------------------------------------------------
+
+StatatisticsBlockTimeModel::StatatisticsBlockTimeModel(std::shared_ptr<StatatisticsBlock> block,
+                                                       double interval)
+    : block(block), interval(interval)
+{
+    if (nullptr == block)
+        throw std::logic_error("Nullptr occured");
+}
+
+size_t StatatisticsBlockTimeModel::priority(void)
+{
+    return 3;
+}
+
+void StatatisticsBlockTimeModel::tick(double time)
+{
+    if (this->next < time)
+    {
+        this->block->write();
+        this->next = time + this->interval;
+    }
+}
+
+void StatatisticsBlockTimeModel::setModifier(std::shared_ptr<RequestModifier>)
+{}
 

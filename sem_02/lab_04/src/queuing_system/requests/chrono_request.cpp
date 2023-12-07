@@ -39,9 +39,12 @@ void ChronoRequestModifier::setTime(const double &time)
     this->time = &time;
 }
 
-std::shared_ptr<Request> ChronoModelRequestCreator::create(void)
+std::shared_ptr<Request> ChronoRequestCreator::create(void)
 {
-    return std::make_shared<ChronoRequest>(this->current++);
-}
+    this->mutex.lock();
+    size_t current = this->current++;
+    this->mutex.unlock();
 
+    return std::make_shared<ChronoRequest>(current);
+}
 

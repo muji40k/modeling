@@ -14,7 +14,7 @@ class Terminator : public Model, public Receiver
         virtual ~Terminator(void) override = default;
 
         virtual void read(void);
-        const std::list<std::shared_ptr<Request>> &getDone(void) const;
+        std::list<std::shared_ptr<Request>> getDone(void);
 
     private:
         std::list<std::shared_ptr<Request>> done;

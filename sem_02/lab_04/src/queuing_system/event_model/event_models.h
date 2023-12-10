@@ -142,7 +142,8 @@ class StatatisticsBlockEventModel : public EventModel
 {
     public:
         StatatisticsBlockEventModel(std::shared_ptr<StatatisticsBlock> block,
-                                    LinearIntervals intervals);
+                                    LinearIntervals intervals,
+                                    std::list<std::shared_ptr<StatatisticsBlock::Strategy>> strategies);
         virtual ~StatatisticsBlockEventModel(void) override = default;
         virtual void event(void) override;
         virtual double nextEvent(void) const override;

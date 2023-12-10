@@ -48,6 +48,7 @@ namespace EventRunnerBuilderMisc
     using IntervalMap = std::unordered_map<std::string, LinearIntervals>;
     using RandomMap = std::unordered_map<std::string, std::shared_ptr<Random>>;
     using RedirectMap = std::unordered_map<std::string, GateEventModel::RedirectFunc>;
+    using StatisticsMap = std::unordered_map<std::string, std::list<std::shared_ptr<StatatisticsBlock::Strategy>>>;
 }
 
 // Creators
@@ -152,15 +153,17 @@ class StatisticsBlockEventModelCreator : public EventModelCreator
 {
     public:
         using IntervalMap = EventRunnerBuilderMisc::IntervalMap;
+        using StatisticsMap = EventRunnerBuilderMisc::StatisticsMap;
 
     public:
-        StatisticsBlockEventModelCreator(IntervalMap map);
+        StatisticsBlockEventModelCreator(IntervalMap imap, StatisticsMap smap);
         virtual ~StatisticsBlockEventModelCreator(void) override = default;
         virtual bool check(std::shared_ptr<Model> model) const override;
         virtual std::shared_ptr<EventModel> create(std::shared_ptr<Model> model) const override;
 
     private:
-        IntervalMap map;
+        IntervalMap imap;
+        StatisticsMap smap;
 };
 
 #endif

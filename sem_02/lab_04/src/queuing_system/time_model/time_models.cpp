@@ -186,11 +186,19 @@ void GateTimeModel::setModifier(std::shared_ptr<RequestModifier> modifier)
 // ---------------------------------------------------------------------------
 
 StatatisticsBlockTimeModel::StatatisticsBlockTimeModel(std::shared_ptr<StatatisticsBlock> block,
-                                                       double interval)
-    : block(block), interval(interval)
+                                                       std::list<std::shared_ptr<StatatisticsBlock::Strategy>> strategies)
+    : block(block)
 {
     if (nullptr == block)
         throw std::logic_error("Nullptr occured");
+
+    for (auto strat : strategies)
+    {
+        if (nullptr == strat)
+            throw std::logic_error("Nullptr occured");
+
+        this->block->registerStrategy(strat);
+    }
 }
 
 size_t StatatisticsBlockTimeModel::priority(void)
@@ -198,13 +206,9 @@ size_t StatatisticsBlockTimeModel::priority(void)
     return 3;
 }
 
-void StatatisticsBlockTimeModel::tick(double time)
+void StatatisticsBlockTimeModel::tick(double)
 {
-    if (this->next < time)
-    {
-        this->block->write();
-        this->next = time + this->interval;
-    }
+    this->block->write();
 }
 
 void StatatisticsBlockTimeModel::setModifier(std::shared_ptr<RequestModifier>)

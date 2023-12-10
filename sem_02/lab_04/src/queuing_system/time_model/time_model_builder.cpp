@@ -1,5 +1,7 @@
 #include "time_model_builder.h"
 
+#include <stdexcept>
+
 #include "time_runner.h"
 
 void TimeRunnerBuilder::create(void)
@@ -164,15 +166,15 @@ std::shared_ptr<TimeModel> GateTimeModelCreator::create(std::shared_ptr<Model> m
     auto func = this->map.find(model->getName());
 
     if (this->map.end() == func)
-        throw;
+        throw std::runtime_error("Redirect not set");
 
     return std::make_shared<GateTimeModel>(std::dynamic_pointer_cast<Gate>(model), (*func).second);
 }
 
 // ----------------------------------------------------------------------------
 
-StatisticsBlockTimeModelCreator::StatisticsBlockTimeModelCreator(size_t interval)
-    : interval(interval)
+StatisticsBlockTimeModelCreator::StatisticsBlockTimeModelCreator(StatisticsMap map)
+    : map(map)
 {}
 
 bool StatisticsBlockTimeModelCreator::check(std::shared_ptr<Model> model) const
@@ -182,6 +184,11 @@ bool StatisticsBlockTimeModelCreator::check(std::shared_ptr<Model> model) const
 
 std::shared_ptr<TimeModel> StatisticsBlockTimeModelCreator::create(std::shared_ptr<Model> model) const
 {
-    return std::make_shared<StatatisticsBlockTimeModel>(std::dynamic_pointer_cast<StatatisticsBlock>(model), this->interval);
+    auto stats = this->map.find(model->getName());
+
+    if (this->map.end() == stats)
+        throw std::runtime_error("Statistic strategies not set");
+
+    return std::make_shared<StatatisticsBlockTimeModel>(std::dynamic_pointer_cast<StatatisticsBlock>(model), (*stats).second);
 }
 

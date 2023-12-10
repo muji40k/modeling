@@ -3,21 +3,23 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "base.h"
 
 class StatatisticsBlock : public Model
 {
     public:
+        using ModelMap = std::unordered_map<std::string, std::shared_ptr<Model>>;
         class Strategy
         {
             public:
                 virtual ~Strategy(void) = default;
-                virtual void execute(void) = 0;
+                virtual void execute(const ModelMap &model) = 0;
         };
 
     public:
-        StatatisticsBlock(std::string name);
+        StatatisticsBlock(std::string name, std::list<std::shared_ptr<Model>> targets);
         virtual ~StatatisticsBlock(void) override = default;
 
         virtual void registerStrategy(std::shared_ptr<Strategy> strategy);
@@ -25,6 +27,7 @@ class StatatisticsBlock : public Model
 
     private:
         std::list<std::shared_ptr<Strategy>> strategies;
+        ModelMap map;
 };
 
 #endif

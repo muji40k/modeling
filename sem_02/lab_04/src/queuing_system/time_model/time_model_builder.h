@@ -46,6 +46,7 @@ namespace TimeRunnerBuilderMisc
 {
     using RandomMap = std::unordered_map<std::string, std::shared_ptr<Random>>;
     using RedirectMap = std::unordered_map<std::string, GateTimeModel::RedirectFunc>;
+    using StatisticsMap = std::unordered_map<std::string, std::list<std::shared_ptr<StatatisticsBlock::Strategy>>>;
 }
 
 // Creators
@@ -124,13 +125,16 @@ class GateTimeModelCreator : public TimeModelCreator
 class StatisticsBlockTimeModelCreator : public TimeModelCreator
 {
     public:
-        StatisticsBlockTimeModelCreator(size_t interval);
+        using StatisticsMap = TimeRunnerBuilderMisc::StatisticsMap;
+
+    public:
+        StatisticsBlockTimeModelCreator(StatisticsMap map);
         virtual ~StatisticsBlockTimeModelCreator(void) override = default;
         virtual bool check(std::shared_ptr<Model> model) const override;
         virtual std::shared_ptr<TimeModel> create(std::shared_ptr<Model> model) const override;
 
     private:
-        const size_t interval;
+        StatisticsMap map;
 };
 
 #endif

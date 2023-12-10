@@ -108,7 +108,7 @@ class StatatisticsBlockTimeModel : public TimeModel
 {
     public:
         StatatisticsBlockTimeModel(std::shared_ptr<StatatisticsBlock> block,
-                                   double interval);
+                                   std::list<std::shared_ptr<StatatisticsBlock::Strategy>> strategies);
         virtual ~StatatisticsBlockTimeModel(void) override = default;
         virtual size_t priority(void) override;
         virtual void tick(double time) override;
@@ -116,8 +116,6 @@ class StatatisticsBlockTimeModel : public TimeModel
 
     private:
         std::shared_ptr<StatatisticsBlock> block;
-        double next;
-        const double interval;
 };
 
 #endif

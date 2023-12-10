@@ -9,16 +9,6 @@ size_t ChronoRequest::getIndex(void) const
     return this->index;
 }
 
-void ChronoRequest::addEvent(std::string modelname, double time, std::string event)
-{
-    this->events.push_back({modelname, time, event});
-}
-
-const std::list<ChronoRequest::Event> &ChronoRequest::getEvents(void) const
-{
-    return this->events;
-}
-
 void ChronoRequestModifier::modify(std::shared_ptr<Request> request,
                                  const Model &modifier,
                                  std::string event)
@@ -37,14 +27,5 @@ void ChronoRequestModifier::modify(std::shared_ptr<Request> request,
 void ChronoRequestModifier::setTime(const double &time)
 {
     this->time = &time;
-}
-
-std::shared_ptr<Request> ChronoRequestCreator::create(void)
-{
-    this->mutex.lock();
-    size_t current = this->current++;
-    this->mutex.unlock();
-
-    return std::make_shared<ChronoRequest>(current);
 }
 

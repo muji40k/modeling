@@ -204,8 +204,8 @@ std::shared_ptr<EventModel> GateEventModelCreator::create(std::shared_ptr<Model>
 
 // ----------------------------------------------------------------------------
 
-StatisticsBlockEventModelCreator::StatisticsBlockEventModelCreator(IntervalMap map)
-    : map(map)
+StatisticsBlockEventModelCreator::StatisticsBlockEventModelCreator(IntervalMap imap, StatisticsMap smap)
+    : imap(imap), smap(smap)
 {}
 
 bool StatisticsBlockEventModelCreator::check(std::shared_ptr<Model> model) const
@@ -215,11 +215,16 @@ bool StatisticsBlockEventModelCreator::check(std::shared_ptr<Model> model) const
 
 std::shared_ptr<EventModel> StatisticsBlockEventModelCreator::create(std::shared_ptr<Model> model) const
 {
-    auto interval = this->map.find(model->getName());
+    auto interval = this->imap.find(model->getName());
 
-    if (this->map.end() == interval)
+    if (this->imap.end() == interval)
         throw std::runtime_error("No interval found");
 
-    return std::make_shared<StatatisticsBlockEventModel>(std::dynamic_pointer_cast<StatatisticsBlock>(model), (*interval).second);
+    auto stats = this->smap.find(model->getName());
+
+    if (this->smap.end() == stats)
+        throw std::runtime_error("Statistic strategies not set");
+
+    return std::make_shared<StatatisticsBlockEventModel>(std::dynamic_pointer_cast<StatatisticsBlock>(model), (*interval).second, (*stats).second);
 }
 

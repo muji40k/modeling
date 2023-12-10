@@ -138,19 +138,14 @@ ProcessorEventModel::ProcessorEventModel(std::shared_ptr<Processor> processor,
     this->next = this->intervals.current();
 }
 
-#include <iostream>
-
 void ProcessorEventModel::event(void)
 {
     if (this->processor->isActive())
         this->processor->release();
-
-    if (!this->processor->read())
+    else if (!this->processor->read())
         this->processor->askSender();
 
     this->last = this->next;
-
-    std::cout << this->last << std::endl;
 }
 
 double ProcessorEventModel::nextEvent(void) const
@@ -177,7 +172,6 @@ void ProcessorEventModel::generateNextEvent(void)
 
         this->intervals.start = this->last + rest;
         this->intervals.reset();
-        // this->intervals.next();
         this->next = this->intervals.current();
         this->seq = true;
     }
@@ -265,13 +259,23 @@ void GateEventModel::setModifier(std::shared_ptr<RequestModifier> modifier)
 // ---------------------------------------------------------------------------
 
 StatatisticsBlockEventModel::StatatisticsBlockEventModel(std::shared_ptr<StatatisticsBlock> block,
-                                                         LinearIntervals intervals)
+                                                         LinearIntervals intervals,
+                                                         std::list<std::shared_ptr<StatatisticsBlock::Strategy>> strategies)
     : block(block), intervals(intervals)
 {
     if (nullptr == block)
         throw std::logic_error("Nullptr occured");
 
     this->intervals.reset();
+
+
+    for (auto strat : strategies)
+    {
+        if (nullptr == strat)
+            throw std::logic_error("Nullptr occured");
+
+        this->block->registerStrategy(strat);
+    }
 }
 
 void StatatisticsBlockEventModel::event(void)

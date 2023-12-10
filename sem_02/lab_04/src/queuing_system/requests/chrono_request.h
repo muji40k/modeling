@@ -9,25 +9,15 @@
 class ChronoRequest : public Request
 {
     public:
-        using Event = struct
-        {
-            std::string modelname;
-            double time;
-            std::string event;
-        };
-
-    public:
         ChronoRequest(size_t index);
         virtual ~ChronoRequest(void) override = default;
 
         size_t getIndex(void) const;
 
-        void addEvent(std::string modelname, double time, std::string event);
-        const std::list<Event> &getEvents(void) const;
+        virtual void addEvent(std::string modelname, double time, std::string event) = 0;
 
     private:
         const size_t index;
-        std::list<Event> events;
 };
 
 class ChronoRequestModifier : public RequestModifier
@@ -41,17 +31,6 @@ class ChronoRequestModifier : public RequestModifier
 
     private:
         const double *time = nullptr;
-};
-
-class ChronoRequestCreator : public RequestCreator
-{
-    public:
-        virtual ~ChronoRequestCreator(void) override = default;
-        virtual std::shared_ptr<Request> create(void) override;
-
-    private:
-        std::mutex mutex;
-        size_t current = 0;
 };
 
 #endif

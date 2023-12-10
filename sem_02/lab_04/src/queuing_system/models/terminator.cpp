@@ -18,8 +18,11 @@ void Terminator::read(void)
     }
 }
 
-const std::list<std::shared_ptr<Request>> &Terminator::getDone(void) const
+std::list<std::shared_ptr<Request>> Terminator::getDone(void)
 {
-    return this->done;
+    std::list<std::shared_ptr<Request>> out = this->done;
+    this->done.clear();
+
+    return out;
 }
 

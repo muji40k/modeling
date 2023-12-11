@@ -6,19 +6,50 @@
 #include <memory>
 
 #include "builder.h"
+#include "time_model_builder.h"
+#include "event_model_builder.h"
 #include "buffer.h"
 #include "terminator.h"
 #include "block_statistics.h"
 
 #include "chrono_request.h"
 
-const std::string &uniform_redirect(const std::list<std::string> &names,
-                                    double time);
+void set_probability(double value);
+const std::string &redirect_func(const std::list<std::string> &names, double time);
 
 bool check_done(std::shared_ptr<Request> request, const Model &modifier,
                 std::string event);
 
 void run_task(std::shared_ptr<RunnerBuilder> builder);
+
+struct time_setup
+{
+    std::shared_ptr<RequestCreator> creator;
+    size_t requests;
+    double time_limit;
+
+    double step;
+    std::shared_ptr<TimeRequestModifier> modifier;
+    const TimeRunnerBuilderMisc::RandomMap &random;
+    const TimeRunnerBuilderMisc::RedirectMap &redirect;
+    const TimeRunnerBuilderMisc::StatisticsMap &stats;
+};
+
+struct event_setup
+{
+    std::shared_ptr<RequestCreator> creator;
+    size_t requests;
+    double time_limit;
+
+    std::shared_ptr<EventRequestModifier> modifier;
+    const EventRunnerBuilderMisc::IntervalMap &interval;
+    const EventRunnerBuilderMisc::RandomMap &random;
+    const EventRunnerBuilderMisc::RedirectMap &redirect;
+    const EventRunnerBuilderMisc::StatisticsMap &stats;
+};
+
+std::shared_ptr<RunnerBuilder> getTimeBuilder(const struct time_setup &setup);
+std::shared_ptr<RunnerBuilder> getEventBuilder(const struct event_setup &setup);
 
 class TaskRequest : public ChronoRequest
 {

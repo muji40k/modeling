@@ -9,13 +9,21 @@
 #include "gate.h"
 #include "terminator.h"
 
-const std::string &uniform_redirect(const std::list<std::string> &names, double)
+static double probability = 0;
+
+void set_probability(double value)
 {
-    size_t val = (size_t)(names.size() * (double)std::rand() / RAND_MAX) % names.size();
+    probability = value;
+}
+
+const std::string &redirect_func(const std::list<std::string> &names, double)
+{
+    double val = (double)std::rand() / RAND_MAX;
 
     auto iter = names.begin();
 
-    for (; val; val--, ++iter);
+    if (1 - probability < val)
+        ++iter;
 
     return *iter;
 }
@@ -51,7 +59,6 @@ void run_task(std::shared_ptr<RunnerBuilder> builder)
     std::shared_ptr<Terminator> terminator1 = std::make_shared<Terminator>("terminator1", pipe1);
     std::shared_ptr<Terminator> terminator2 = std::make_shared<Terminator>("terminator2", pipe2);
     std::shared_ptr<Terminator> terminator3 = std::make_shared<Terminator>("terminator3", pipe4);
-    std::list<std::shared_ptr<Terminator>> terminators = {terminator1, terminator2, terminator3};
 
     std::shared_ptr<StatatisticsBlock> stats = std::make_shared<StatatisticsBlock>("stats",
         std::list<std::shared_ptr<Model>>{
@@ -77,6 +84,43 @@ void run_task(std::shared_ptr<RunnerBuilder> builder)
     auto runner = builder->result();
 
     runner->run();
+}
+
+std::shared_ptr<RunnerBuilder> getTimeBuilder(const time_setup &setup)
+{
+    auto builder = std::make_shared<TimeRunnerBuilder>();
+
+    builder->setRequests(setup.requests)
+            .setTimeStep(setup.step)
+            .setTimeLimit(setup.time_limit)
+            .setTimeRequestModifier(setup.modifier)
+            .registerModelCreator(std::make_shared<PipeTimeModelCreator>())
+            .registerModelCreator(std::make_shared<BufferTimeModelCreator>())
+            .registerModelCreator(std::make_shared<GeneratorTimeModelCreator>(setup.random, setup.creator))
+            .registerModelCreator(std::make_shared<ProcessorTimeModelCreator>(setup.random))
+            .registerModelCreator(std::make_shared<TerminatorTimeModelCreator>())
+            .registerModelCreator(std::make_shared<GateTimeModelCreator>(setup.redirect))
+            .registerModelCreator(std::make_shared<StatisticsBlockTimeModelCreator>(setup.stats));
+
+    return builder;
+}
+
+std::shared_ptr<RunnerBuilder> getEventBuilder(const event_setup &setup)
+{
+    auto builder = std::make_shared<EventRunnerBuilder>();
+
+    builder->setRequests(setup.requests)
+            .setTimeLimit(setup.time_limit)
+            .setEventRequestModifier(setup.modifier)
+            .registerModelCreator(std::make_shared<PipeEventModelCreator>(setup.interval))
+            .registerModelCreator(std::make_shared<BufferEventModelCreator>(setup.interval))
+            .registerModelCreator(std::make_shared<GeneratorEventModelCreator>(setup.random, setup.creator))
+            .registerModelCreator(std::make_shared<ProcessorEventModelCreator>(setup.random, setup.interval))
+            .registerModelCreator(std::make_shared<TerminatorEventModelCreator>(setup.interval))
+            .registerModelCreator(std::make_shared<GateEventModelCreator>(setup.redirect, setup.interval))
+            .registerModelCreator(std::make_shared<StatisticsBlockEventModelCreator>(setup.interval, setup.stats));
+
+    return builder;
 }
 
 TaskRequest::TaskRequest(size_t index) : ChronoRequest(index) {}

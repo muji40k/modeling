@@ -39,7 +39,7 @@ FLAGS    = -std=c++17 -Wall -Werror -Wpedantic -Wextra -I$(DIR_HEADER) \
 		   $(foreach dir, $(ADD_DIRS_HEADER), -I$(DIR_HEADER)/$(dir))  \
 		   -I$(DIR_OUT)/$(DIR_CUI)/$(DIR_CGUI)                        \
 		   $(foreach dir, $(ADD_DIRS_CGUI), -I$(DIR_OUT)/$(DIR_CUI)/$(DIR_CGUI)/$(dir))
-LFLAGS   =
+LFLAGS   = $(shell pkg-config --libs Qt5Widgets)
 ADDFLAGS =
 
 MOCFLAGS = -I$(DIR_HEADER) $(foreach dir, $(ADD_DIRS_CUI), -I$(DIR_HEADER)/$(DIR_CUI)/$(dir)) 

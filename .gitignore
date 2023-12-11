@@ -1,5 +1,8 @@
 **/out
 **/__pycache__
 *tmp*
-
+*.out
+.vscode
+.ccls*
+.tmux
 

@@ -1,0 +1,504 @@
+\section*{Цель работы}
+
+В информационный центр приходят клиенты через интервал времени $10 \pm 2$
+минуты. Если все три имеющихся оператора заняты, клиенту отказывают в
+обслуживании. Операторы имеют разную производительность и могут обеспечивать
+обслуживание среднего запроса пользователя за $20 \pm 5; 40 \pm 10; 40 \pm 20.$
+Клиенты стремятся занять свободного оператора с максимальной
+производительностью. Полученные запросы сдаются в накопитель. Откуда выбираются
+на обработку. На первый компьютер запросы от 1 и 2-ого операторов, на второй --
+запросы от 3-его. Время обработки запросов первым и 2-м компьютером равны
+соответственно 15 и 30 мин. Промоделировать процесс обработки 300 запросов.
+Найти вероятность отказа. 
+
+\section*{Моделируемая система}
+
+\begin{figure}[h]
+    \centering
+    \def\svgwidth{\textwidth}
+    \input{scheme.pdf_tex}
+    \caption{Схема моделируемой системы}
+\end{figure}
+
+В процессе взаимодействия клиентов с информационным центром возможно:
+\begin{enumerate}
+    \item режим нормального обслуживания, т.е. клиент выбирает одного из
+          свободных операторов, отдавая предпочтение тому у которого меньше
+          номер;
+    \item режим отказа в обслуживании клиента, когда все операторы заняты.
+\end{enumerate}
+
+Вероятность отказа находится по следующей формуле:
+\begin{equation*}
+    P_\text{отказ} = \frac{N_\text{отказ}}{N_\text{всего}}
+\end{equation*}
+
+\section*{Текст программы}
+\begin{lstlisting}[caption={Реализация элементов системы}, language=c++]
+class Model
+{
+    public:
+        Model(std::string name);
+        virtual ~Model(void) = 0;
+
+        virtual const std::string &getName(void) const;
+
+        virtual void
+        setModifier(std::shared_ptr<RequestModifier>);
+        virtual std::shared_ptr<RequestModifier>
+        getModifier(void) const;
+
+    private:
+        const std::string name;
+        std::shared_ptr<RequestModifier> modifier;
+};
+
+class Request
+{
+    public:
+        virtual ~Request(void) = 0;
+};
+
+class Sender;
+
+class Receiver
+{
+    public:
+        Receiver(std::shared_ptr<Pipe> pipe);
+        virtual ~Receiver(void) = 0;
+
+        void connectInPipe(std::shared_ptr<Pipe> pipe);
+        std::shared_ptr<Pipe> inpipe(void);
+        void askSender(void);
+
+        void registerSender(std::shared_ptr<Sender> sender);
+
+    private:
+        std::shared_ptr<Pipe> _inpipe;
+        std::list<std::shared_ptr<Sender>> _senders;
+};
+
+class Sender
+{
+    public:
+        Sender(std::shared_ptr<Pipe> pipe);
+        virtual ~Sender(void) = 0;
+
+        void connectOutPipe(std::shared_ptr<Pipe> pipe);
+        std::shared_ptr<Pipe> outpipe(void);
+
+        virtual void callback(void) = 0;
+
+    private:
+        std::shared_ptr<Pipe> _outpipe;
+};
+
+class Runner
+{
+    public:
+        virtual ~Runner(void) = default;
+        virtual void run(void) = 0;
+};
+
+class BasicPipe : public Pipe
+{
+    public:
+        BasicPipe(std::string name);
+        virtual ~BasicPipe(void) override = default;
+
+        virtual bool empty(void) const override;
+        virtual bool push(std::shared_ptr<Request>) override;
+        virtual std::shared_ptr<Request> pop(void) override;
+
+        virtual void newSet(void) override;
+        virtual void dropCurrentSet(void) override;
+        virtual void clear(void) override;
+
+    private:
+        std::mutex mutex;
+        std::list<std::list<std::shared_ptr<Request>>> sets;
+};
+
+class Buffer : public Model, public Sender, public Receiver
+{
+    public:
+        Buffer(std::string name, const size_t size,
+               std::shared_ptr<Pipe> inpipe,
+               std::shared_ptr<Pipe> outpipe);
+        virtual ~Buffer(void) override = default;
+
+        virtual size_t read(void);
+        virtual size_t send(size_t amount = 1);
+
+        virtual size_t used(void) const;
+
+        virtual void callback(void) override;
+
+    private:
+        const size_t size;
+        std::list<std::shared_ptr<Request>> memory;
+        std::mutex mutex;
+};
+
+class Gate : public Model, public Receiver
+{
+    public:
+        class Out : public Model, public Sender
+        {
+            public:
+                Out(std::string name,
+                    std::shared_ptr<Pipe> outpipe);
+                virtual ~Out(void) override = default;
+
+                virtual bool send(std::shared_ptr<Request>);
+
+                virtual void callback(void) override;
+        };
+
+    public:
+        Gate(std::string name, std::shared_ptr<Pipe> inpipe,
+             std::list<std::shared_ptr<Pipe>> outpipes);
+        virtual ~Gate(void) override = default;
+
+        virtual void
+        setModifier(std::shared_ptr<RequestModifier>)
+        override;
+
+        virtual bool read(void);
+        virtual bool redirect(std::string name);
+        virtual const std::list<std::string> &list(void);
+
+    private:
+        std::list<std::shared_ptr<Out>> outs;
+        std::list<std::string> names;
+        std::shared_ptr<Request> current = nullptr;
+};
+
+class RequestCreator
+{
+    public:
+        virtual ~RequestCreator(void) = default;
+        virtual std::shared_ptr<Request> create(void) = 0;
+};
+
+class Generator : public Model, public Sender
+{
+    public:
+        Generator(std::string name,
+                  std::shared_ptr<Pipe> outpipe = nullptr);
+        virtual ~Generator(void) override = default;
+        virtual void callback(void) override;
+
+        virtual void
+        setCreator(std::shared_ptr<RequestCreator> creator);
+
+        virtual void generate(const size_t amount = 1);
+
+    private:
+        std::shared_ptr<RequestCreator> cretator = nullptr;
+};
+
+class Processor : public Model, public Sender,
+                  public Receiver
+{
+    public:
+        Processor(std::string name,
+                  std::shared_ptr<Pipe> inpipe = nullptr,
+                  std::shared_ptr<Pipe> outpipe = nullptr);
+        virtual ~Processor(void) override = default;
+
+        virtual bool read(void);
+        virtual bool isActive(void) const;
+        virtual bool release(void);
+
+        virtual void callback(void) override;
+
+    private:
+        std::shared_ptr<Request> active = nullptr;
+        std::list<std::shared_ptr<Request>> current;
+};
+
+class Terminator : public Model, public Receiver
+{
+    public:
+        Terminator(std::string name,
+                   std::shared_ptr<Pipe> inpipe = nullptr);
+        virtual ~Terminator(void) override = default;
+
+        virtual void read(void);
+        std::list<std::shared_ptr<Request>> getDone(void);
+
+    private:
+        std::list<std::shared_ptr<Request>> done;
+};
+
+class StatatisticsBlock : public Model
+{
+    public:
+        using ModelMap = 
+        std::unordered_map<std::string,
+                           std::shared_ptr<Model>>;
+        class Strategy
+        {
+            public:
+                virtual ~Strategy(void) = default;
+                virtual void
+                execute(const ModelMap &model) = 0;
+        };
+
+    public:
+        StatatisticsBlock(std::string name,
+                          std::list<std::shared_ptr<Model>>);
+        virtual ~StatatisticsBlock(void) override = default;
+
+        virtual void
+        registerStrategy(std::shared_ptr<Strategy> strategy);
+        virtual void write(void);
+
+    private:
+        std::list<std::shared_ptr<Strategy>> strategies;
+        ModelMap map;
+};
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Реализация подхода $\Delta t$}, language=c++]
+class TimeModel
+{
+    public:
+        virtual ~TimeModel(void) = default;
+        virtual size_t priority(void) = 0;
+        virtual void tick(double time) = 0;
+        virtual void
+        setModifier(std::shared_ptr<RequestModifier>) = 0;
+};
+
+class TimeRunner : public Runner
+{
+    public:
+        TimeRunner(size_t requests, double time, double step,
+                   std::shared_ptr<TimeRequestModifier>,
+                   std::list<std::shared_ptr<TimeModel>>);
+        virtual ~TimeRunner(void) override = default;
+
+        virtual void run(void) override;
+
+    private:
+        const size_t requests;
+        const double end;
+        const double step;
+        std::shared_ptr<TimeRequestModifier> modifier;
+        std::map<size_t,
+                 std::list<std::shared_ptr<TimeModel>>> \
+        items;
+};
+
+TimeRunner::TimeRunner(size_t requests, double time,
+                       double step,
+                       std::shared_ptr<TimeRequestModifier>,
+                       std::list<std::shared_ptr<TimeModel>>)
+    : requests(requests), end(std::abs(time)),
+      step(std::abs(step)), modifier(modifier)
+{
+    if (nullptr == this->modifier)
+        throw std::logic_error("Nullptr modifier");
+
+    for (auto &item : items)
+    {
+        if (nullptr == item)
+            throw std::logic_error("Nullptr modifier");
+
+        auto iter = this->items.find(item->priority());
+
+        if (this->items.end() == iter)
+            this->items.emplace(item->priority(),
+            std::list<std::shared_ptr<TimeModel>>({item}));
+        else
+            (*iter).second.push_back(item);
+    }
+}
+
+void TimeRunner::run(void)
+{
+    double time = 0;
+    this->modifier->setTime(time);
+    auto modifier = this->modifier->getModifier();
+
+    for (auto &pair : this->items)
+        for (auto &item : pair.second)
+            item->setModifier(modifier);
+
+    for (; this->end > time
+           && this->requests > this->modifier->getPassed();
+           time += this->step)
+        for (auto &pair : this->items)
+            for (auto &item : pair.second)
+                item->tick(time);
+}
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Реализация событийного подхода}, language=c++]
+class EventModel
+{
+    public:
+        virtual ~EventModel(void) = default;
+        virtual void event(void) = 0;
+        virtual double nextEvent(void) const = 0;
+        virtual void generateNextEvent(void) = 0;
+        virtual void
+        setModifier(std::shared_ptr<RequestModifier>) = 0;
+};
+
+class EventRunner : public Runner
+{
+    public:
+        EventRunner(size_t requests, double time,
+                    std::shared_ptr<EventRequestModifier>,
+                    std::list<std::shared_ptr<EventModel>>);
+        virtual ~EventRunner(void) override = default;
+
+        virtual void run(void) override;
+
+    private:
+        const size_t requests;
+        const double end;
+        std::shared_ptr<EventRequestModifier> modifier;
+        std::list<std::shared_ptr<EventModel>> items;
+};
+
+EventRunner::EventRunner(size_t requests, double time,
+                         std::shared_ptr<EventRequestModifier>,
+                         std::list<std::shared_ptr<EventModel>>)
+    : requests(requests), end(time), modifier(modifier),
+      items(items)
+{
+    if (nullptr == this->modifier)
+        throw std::logic_error("Nullptr modifier");
+
+    for (auto &item : items)
+        if (nullptr == item)
+            throw std::logic_error("Nullptr modifier");
+}
+
+void EventRunner::run(void)
+{
+    double time = 0;
+    this->modifier->setTime(time);
+    auto modifier = this->modifier->getModifier();
+
+    for (auto &item : this->items)
+        item->setModifier(modifier);
+
+    while (this->end > time
+           && this->requests > this->modifier->getPassed())
+    {
+        auto iter = this->items.begin(), next = iter;
+
+        for (; this->items.end() != iter; ++iter)
+            if ((*iter)->nextEvent() < (*next)->nextEvent())
+                next = iter;
+
+        auto model = *next;
+        time = model->nextEvent();
+        model->event();
+        model->generateNextEvent();
+    }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Сборка схемы}, language=c++]
+void run_task(std::shared_ptr<RunnerBuilder> builder)
+{
+    auto pipe1 = \
+    std::make_shared<BasicPipe>("pipe1");
+    auto pipe2 = \
+    std::make_shared<BasicPipe>("pipe2");
+    auto pipe3 = \
+    std::make_shared<BasicPipe>("pipe3");
+    auto pipe4 = \
+    std::make_shared<BasicPipe>("pipe4");
+    auto pipe5 = \
+    std::make_shared<BasicPipe>("pipe5");
+    auto pipe6 = \
+    std::make_shared<BasicPipe>("pipe6");
+
+    auto generator = \
+    std::make_shared<Generator>("generator", pipe1);
+    auto operator1 = \
+    std::make_shared<Processor>("operator1", pipe1, pipe2);
+    auto operator2 = \
+    std::make_shared<Processor>("operator2", pipe1, pipe2);
+    auto operator3 = \
+    std::make_shared<Processor>("operator3", pipe1, pipe3);
+    auto buffer1 = \
+    std::make_shared<Buffer>("buffer1", 0, pipe2, pipe4);
+    auto buffer2 = \
+    std::make_shared<Buffer>("buffer2", 0, pipe3, pipe5);
+    auto processor1 = \
+    std::make_shared<Processor>("processor1", pipe4, pipe6);
+    auto processor2 = \
+    std::make_shared<Processor>("processor2", pipe5, pipe6);
+
+    processor1->registerSender(buffer1);
+    processor2->registerSender(buffer2);
+
+    auto terminator1 = \
+    std::make_shared<Terminator>("terminator1", pipe1);
+    auto terminator2 = \
+    std::make_shared<Terminator>("terminator2", pipe6);
+
+    std::shared_ptr<StatatisticsBlock> stats = \
+    std::make_shared<StatatisticsBlock>("stats",
+        std::list<std::shared_ptr<Model>>{
+            pipe1, pipe2, pipe3, pipe4, pipe5, pipe6,
+            generator, operator1, operator2, operator3,
+            buffer1, buffer2,
+            processor1, processor2,
+            terminator1, terminator2
+        });
+
+    builder->addModel(generator)
+            .addModel(pipe1)
+            .addModel(operator1)
+            .addModel(operator2)
+            .addModel(operator3)
+            .addModel(terminator1)
+            .addModel(pipe2)
+            .addModel(pipe3)
+            .addModel(buffer1)
+            .addModel(buffer2)
+            .addModel(pipe4)
+            .addModel(pipe5)
+            .addModel(processor1)
+            .addModel(processor2)
+            .addModel(pipe6)
+            .addModel(terminator2)
+            .addModel(stats);
+
+    builder->create();
+    auto runner = builder->result();
+
+    runner->run();
+}
+\end{lstlisting}
+
+
+\section*{Результаты работы}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{res.png}
+    \caption{Результат работы программы при заданных величинах}
+\end{figure}
+
+
+
+\clearpage
+
+\section*{Вывод}
+
+В результате выполнения работы, было разработано программное обеспечение
+позволяющее определить вероятность для заданной схемы с произвольными
+параметрами установленных законов распределения.
+
+Вероятность отказа для изначальных условий составила 0.21.
+

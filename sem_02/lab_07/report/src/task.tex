@@ -1,0 +1,213 @@
+\section*{Цель работы}
+
+В информационный центр приходят клиенты через интервал времени $10 \pm 2$
+минуты. Если все три имеющихся оператора заняты, клиенту отказывают в
+обслуживании. Операторы имеют разную производительность и могут обеспечивать
+обслуживание среднего запроса пользователя за $20 \pm 5; 40 \pm 10; 40 \pm 20.$
+Клиенты стремятся занять свободного оператора с максимальной
+производительностью. Полученные запросы сдаются в накопитель. Откуда выбираются
+на обработку. На первый компьютер запросы от 1 и 2-ого операторов, на второй --
+запросы от 3-его. Время обработки запросов первым и 2-м компьютером равны
+соответственно 15 и 30 мин. Промоделировать процесс обработки 300 запросов.
+Найти вероятность отказа. 
+
+\section*{Моделируемая система}
+
+\begin{figure}[h]
+    \centering
+    \def\svgwidth{\textwidth}
+    \input{scheme.pdf_tex}
+    \caption{Схема моделируемой системы}
+\end{figure}
+
+В процессе взаимодействия клиентов с информационным центром возможно:
+\begin{enumerate}[leftmargin=\parindent]
+    \item режим нормального обслуживания, т.е. клиент выбирает одного из
+          свободных операторов, отдавая предпочтение тому у которого меньше
+          номер;
+    \item режим отказа в обслуживании клиента, когда все операторы заняты.
+\end{enumerate}
+
+Вероятность отказа находится по следующей формуле:
+\begin{equation*}
+    P_\text{отказ} = \frac{N_\text{отказ}}{N_\text{всего}}.
+\end{equation*}
+
+\section*{Текст программы}
+\begin{lstlisting}[caption={Реализация системы}]
+; ==SETUP====================================================================
+gen_mean  EQU 10
+gen_rng   EQU 2
+op1_mean  EQU 20
+op1_rng   EQU 5
+op2_mean  EQU 40
+op2_rng   EQU 10
+op3_mean  EQU 40
+op3_rng   EQU 20
+proc1_val EQU 15
+proc2_val EQU 30
+; ==MODEL====================================================================
+GENERATE gen_mean,gen_rng
+
+label_operator1  GATE NU operator1,label_operator2
+                 SEIZE operator1
+                 ADVANCE op1_mean,op1_rng
+                 RELEASE operator1
+                 QUEUE buffer1
+                 TRANSFER ,label_processor1
+
+label_operator2  GATE NU operator2,label_operator3
+                 SEIZE operator2
+                 ADVANCE op2_mean,op2_rng
+                 RELEASE operator2
+                 QUEUE buffer1
+                 TRANSFER ,label_processor1
+
+label_operator3  GATE NU operator3,label_fault
+                 SEIZE operator3
+                 ADVANCE op3_mean,op3_rng
+                 RELEASE operator3
+                 QUEUE buffer2
+                 TRANSFER ,label_processor2
+
+label_processor1 SEIZE processor1
+                 DEPART buffer1
+                 ADVANCE proc1_val
+                 RELEASE processor1
+                 TRANSFER ,label_success
+
+label_processor2 SEIZE processor2
+                 DEPART buffer2
+                 ADVANCE proc2_val
+                 RELEASE processor2
+
+label_success    TRANSFER ,label_stats
+label_fault      TRANSFER ,label_stats
+label_stats      SAVEVALUE REFUSE_PROBABILITY,
+                 (N$label_fault/(N$label_fault + N$label_success))
+
+TERMINATE 1
+; ===========================================================================
+
+START 300
+\end{lstlisting}
+
+
+\section*{Результаты работы}
+\begin{lstlisting}[caption={Отчет о работе системы}]
+             GPSS World Simulation Report - model.10.1
+
+
+                   Thursday, December 13, 2023 23:01:53  
+
+           START TIME           END TIME  BLOCKS  FACILITIES  STORAGES
+                0.000           3024.695    32        5          0
+
+
+              NAME                       VALUE  
+          BUFFER1                     10013.000
+          BUFFER2                     10016.000
+          GEN_MEAN                       10.000
+          GEN_RNG                         2.000
+          LABEL_FAULT                    30.000
+          LABEL_OPERATOR1                 2.000
+          LABEL_OPERATOR2                 8.000
+          LABEL_OPERATOR3                14.000
+          LABEL_PROCESSOR1               20.000
+          LABEL_PROCESSOR2               25.000
+          LABEL_STATS                    31.000
+          LABEL_SUCCESS                  29.000
+          OP1_MEAN                       20.000
+          OP1_RNG                         5.000
+          OP2_MEAN                       40.000
+          OP2_RNG                        10.000
+          OP3_MEAN                       40.000
+          OP3_RNG                        20.000
+          OPERATOR1                   10010.000
+          OPERATOR2                   10011.000
+          OPERATOR3                   10012.000
+          PROC1_VAL                      15.000
+          PROC2_VAL                      30.000
+          PROCESSOR1                  10014.000
+          PROCESSOR2                  10017.000
+          REFUSE_PROBABILITY          10015.000
+
+
+ LABEL              LOC  BLOCK TYPE     ENTRY COUNT CURRENT COUNT RETRY
+                    1    GENERATE           303             0       0
+LABEL_OPERATOR1     2    GATE               303             0       0
+                    3    SEIZE              122             0       0
+                    4    ADVANCE            122             0       0
+                    5    RELEASE            122             0       0
+                    6    QUEUE              122             0       0
+                    7    TRANSFER           122             0       0
+LABEL_OPERATOR2     8    GATE               181             0       0
+                    9    SEIZE               60             0       0
+                   10    ADVANCE             60             1       0
+                   11    RELEASE             59             0       0
+                   12    QUEUE               59             0       0
+                   13    TRANSFER            59             0       0
+LABEL_OPERATOR3    14    GATE               121             0       0
+                   15    SEIZE               51             0       0
+                   16    ADVANCE             51             1       0
+                   17    RELEASE             50             0       0
+                   18    QUEUE               50             0       0
+                   19    TRANSFER            50             0       0
+LABEL_PROCESSOR1   20    SEIZE              181             1       0
+                   21    DEPART             180             0       0
+                   22    ADVANCE            180             0       0
+                   23    RELEASE            180             0       0
+                   24    TRANSFER           180             0       0
+LABEL_PROCESSOR2   25    SEIZE               50             0       0
+                   26    DEPART              50             0       0
+                   27    ADVANCE             50             0       0
+                   28    RELEASE             50             0       0
+LABEL_SUCCESS      29    TRANSFER           230             0       0
+LABEL_FAULT        30    TRANSFER            70             0       0
+LABEL_STATS        31    SAVEVALUE          300             0       0
+                   32    TERMINATE          300             0       0
+
+
+FACILITY         ENTRIES  UTIL.   AVE. TIME AVAIL. OWNER PEND INTER RETRY DELAY
+ OPERATOR1          122    0.805      19.949  1        0    0    0     0      0
+ OPERATOR2           60    0.786      39.645  1      302    0    0     0      0
+ OPERATOR3           51    0.718      42.575  1      298    0    0     0      0
+ PROCESSOR1         181    0.893      14.917  1      301    0    0     0      0
+ PROCESSOR2          50    0.496      30.000  1        0    0    0     0      0
+
+
+QUEUE              MAX CONT. ENTRY ENTRY(0) AVE.CONT. AVE.TIME   AVE.(-0) RETRY
+ BUFFER1             2    1    181     61     0.283      4.732      7.138   0
+ BUFFER2             1    0     50     47     0.004      0.216      3.598   0
+
+
+SAVEVALUE               RETRY       VALUE
+ REFUSE_PROBABILITY         0          0.233                            
+
+
+CEC XN   PRI          M1      ASSEM  CURRENT  NEXT  PARAMETER    VALUE
+   301    0        2997.833    301     20     21
+
+
+FEC XN   PRI         BDT      ASSEM  CURRENT  NEXT  PARAMETER    VALUE
+   298    0        3028.002    298     16     17
+   304    0        3030.691    304      0      1
+   302    0        3046.855    302     10     11
+\end{lstlisting}
+
+В результате моделирования, вероятность отказа составила 0.233, что совпадает
+со значением полученным при использовании программы, написанной на языке
+общего назначения (C++), реализующей событийный метод организации управляющей
+программы и отличается на 8.7\% от величины, рассчитанной с использованием
+метода $\Delta t$ (0.21).
+
+\clearpage
+
+\section*{Вывод}
+
+В результате выполнения работы, было разработано программное обеспечение
+позволяющее определить вероятность для заданной схемы с произвольными
+параметрами установленных законов распределения.
+
+Вероятность отказа для изначальных условий составила 0.233.
+

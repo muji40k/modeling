@@ -1,0 +1,29 @@
+
+; ==SETUP====================================================================
+
+gen_min     EQU 1
+gen_max     EQU 5
+proc_mean   EQU 5
+proc_sdev   EQU 1
+probability EQU 0.5
+
+; ===========================================================================
+
+gen_mean EQU (gen_min + gen_max) / 2
+gen_rng  EQU (gen_max - gen_min) / 2
+
+; ==MODEL====================================================================
+
+            GENERATE gen_mean,gen_rng
+label_begin QUEUE bufferp
+            SEIZE processor
+            DEPART bufferp
+            ADVANCE (NORMAL(1,proc_mean,proc_sdev))
+            RELEASE processor
+            TEST G (UNIFORM(1,0,1)),probability,label_begin
+            TERMINATE 1
+
+; ===========================================================================
+
+START 200
+

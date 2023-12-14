@@ -1,0 +1,60 @@
+
+; ==SETUP====================================================================
+
+gen_mean  EQU 10
+gen_rng   EQU 2
+op1_mean  EQU 20
+op1_rng   EQU 5
+op2_mean  EQU 40
+op2_rng   EQU 10
+op3_mean  EQU 40
+op3_rng   EQU 20
+proc1_val EQU 15
+proc2_val EQU 30
+
+; ==MODEL====================================================================
+
+GENERATE gen_mean,gen_rng
+
+label_operator1  GATE NU operator1,label_operator2
+                 SEIZE operator1
+                 ADVANCE op1_mean,op1_rng
+                 RELEASE operator1
+                 QUEUE buffer1
+                 TRANSFER ,label_processor1
+
+label_operator2  GATE NU operator2,label_operator3
+                 SEIZE operator2
+                 ADVANCE op2_mean,op2_rng
+                 RELEASE operator2
+                 QUEUE buffer1
+                 TRANSFER ,label_processor1
+
+label_operator3  GATE NU operator3,label_fault
+                 SEIZE operator3
+                 ADVANCE op3_mean,op3_rng
+                 RELEASE operator3
+                 QUEUE buffer2
+                 TRANSFER ,label_processor2
+
+label_processor1 SEIZE processor1
+                 DEPART buffer1
+                 ADVANCE proc1_val
+                 RELEASE processor1
+                 TRANSFER ,label_success
+
+label_processor2 SEIZE processor2
+                 DEPART buffer2
+                 ADVANCE proc2_val
+                 RELEASE processor2
+
+label_success    TRANSFER ,label_stats
+label_fault      TRANSFER ,label_stats
+label_stats      SAVEVALUE REFUSE_PROBABILITY,(N$label_fault/(N$label_fault + N$label_success))
+
+TERMINATE 1
+
+; ===========================================================================
+
+START 300
+

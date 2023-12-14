@@ -1,0 +1,158 @@
+\section*{Цель работы}
+
+Целью работы  является моделирование системы, состоящей из генератора, буфера и
+обслуживающего аппарата. Генератор выдает сообщения, распределенные по
+равномерному закону, они приходят в память, обслуживающий аппарат обрабатывает
+каждое из них согласно нормальному распределению. Необходимо определить
+оптимальную длину очереди, при которой не будет потерянных сообщений.
+Использовать принципы $\Delta t$ и событийный. Задаваемая часть сообщений
+попадает в очередь повторно. Для реализации импользовать язык GPSS.
+
+\section*{Принципы организации управляющей программы}
+\vspace{-1\baselineskip}
+\subsection*{Принцип $\Delta t$}
+
+Данный принцип заключается в последовательном анализе состояний всех блоков в
+момент $t + \Delta t$ по заданному состоянию блоков в момент $t$. При этом
+новое состояние блоков определяется в соответствии с их алгоритмическим
+описанием с учетом действующих случайных факторов, задаваемых распределениями
+вероятности. В результате такого анализа принимается решение о том, какие
+общесистемные события должны имитироваться программной моделью на данный момент
+времени.
+
+Основной недостаток этого принципа: значительные затраты машинного времени на
+реализацию моделирования системы. А при недостаточно малом $\Delta t$
+появляется опасность пропуска отдельных событий в системе, что исключает
+возможность получения адекватных результатов при моделировании.
+
+\subsection*{Событийный принцип}
+
+Характерное свойство систем обработки информации заключается в том, что
+состояния отдельных устройств изменяются в дискретные моменты времени,
+совпадающие с моментами времени поступления сообщений в систему, времени
+поступления окончания задачи, времени поступления аварийных сигналов и т.д.
+Поэтому моделирование и продвижение времени в системе удобно проводить,
+используя событийный принцип, при котором состояние всех блоков имитационной
+модели анализируется лишь в момент появления какого-либо события. Момент
+поступления следующего события определяется минимальным значением из списка
+будущих событий, представляющего собой совокупность моментов ближайшего
+изменения состояния каждого из блоков системы.
+
+\section*{Моделируемая система}
+
+\begin{figure}[h]
+    \centering
+    \def\svgwidth{\textwidth}
+    \input{scheme.pdf_tex}
+    \caption{Схема моделируемой системы}
+\end{figure}
+
+\clearpage
+
+\section*{Текст программы}
+\begin{lstlisting}[caption={Реализация системы}]
+; ==SETUP====================================================================
+gen_min     EQU 1
+gen_max     EQU 5
+proc_mean   EQU 5
+proc_sdev   EQU 1
+probability EQU 0.5
+; ===========================================================================
+gen_mean EQU (gen_min + gen_max) / 2
+gen_rng  EQU (gen_max - gen_min) / 2
+; ==MODEL====================================================================
+            GENERATE gen_mean,gen_rng
+label_begin QUEUE bufferp
+            SEIZE processor
+            DEPART bufferp
+            ADVANCE (NORMAL(1,proc_mean,proc_sdev))
+            RELEASE processor
+            TEST G (UNIFORM(1,0,1)),probability,label_begin
+            TERMINATE 1
+; ===========================================================================
+START 200
+\end{lstlisting}
+
+
+\section*{Результаты работы}
+
+\begin{lstlisting}[caption={Отчет о работе системы}]
+              GPSS World Simulation Report - model.39.1
+
+
+                   Thursday, December 13, 2023 22:18:07  
+
+           START TIME           END TIME  BLOCKS  FACILITIES  STORAGES
+                0.000           1955.360     8        1          0
+
+
+              NAME                       VALUE  
+          BUFFERP                     10007.000
+          GEN_MAX                         5.000
+          GEN_MEAN                        3.000
+          GEN_MIN                         1.000
+          GEN_RNG                         2.000
+          LABEL_BEGIN                     2.000
+          PROBABILITY                     0.500
+          PROCESSOR                   10008.000
+          PROC_MEAN                       5.000
+          PROC_SDEV                       1.000
+
+
+ LABEL              LOC  BLOCK TYPE     ENTRY COUNT CURRENT COUNT RETRY
+                    1    GENERATE           654             0       0
+LABEL_BEGIN         2    QUEUE              841           453       0
+                    3    SEIZE              388             1       0
+                    4    DEPART             387             0       0
+                    5    ADVANCE            387             0       0
+                    6    RELEASE            387             0       0
+                    7    TEST               387             0       0
+                    8    TERMINATE          200             0       0
+
+
+FACILITY         ENTRIES  UTIL.   AVE. TIME AVAIL. OWNER PEND INTER RETRY DELAY
+ PROCESSOR          388    0.998       5.028  1      302    0    0     0    453
+
+
+QUEUE              MAX CONT. ENTRY ENTRY(0) AVE.CONT. AVE.TIME   AVE.(-0) RETRY
+ BUFFERP           454  454    841      1   228.778    531.919    532.553   0
+
+
+CEC XN   PRI          M1      ASSEM  CURRENT  NEXT  PARAMETER    VALUE
+   302    0         904.760    302      3      4
+
+
+FEC XN   PRI         BDT      ASSEM  CURRENT  NEXT  PARAMETER    VALUE
+   655    0        1955.460    655      0      1
+\end{lstlisting}
+
+\begin{threeparttable}[]
+\small
+\centering
+\caption{Сравнение результатов моделирования для программ, написанных на языке общего назначения и языке GPSS}
+\begin{tabular}{|rrrrr|}
+\hline
+\multicolumn{1}{|l|}{\multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}Вероятность\\ перенаправления\end{tabular}}} & \multicolumn{2}{l|}{C++}                                                                                                 & \multicolumn{2}{l|}{GPSS}                                                                                                \\ \cline{2-5} 
+\multicolumn{1}{|l|}{}                                                                                       & \multicolumn{1}{l|}{Размер очереди} & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}Время\\ моделирования\end{tabular}} & \multicolumn{1}{l|}{Размер очереди} & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}Время\\ моделирования\end{tabular}} \\ \hline
+\multicolumn{5}{|c|}{$n = 200, a = 1, b = 5, \mu = 5, \sigma = 1$}                                                                                                                                                                                                                                                                                                 \\ \hline
+\multicolumn{1}{|r|}{0.00}                                                                                   & \multicolumn{1}{r|}{143.00}         & \multicolumn{1}{r|}{1025.60}                                                       & \multicolumn{1}{r|}{141}            & 1008.830                                                                           \\ \hline
+\multicolumn{1}{|r|}{0.25}                                                                                   & \multicolumn{1}{r|}{251.60}         & \multicolumn{1}{r|}{1351.36}                                                       & \multicolumn{1}{r|}{251}            & 1328.438                                                                           \\ \hline
+\multicolumn{1}{|r|}{0.50}                                                                                   & \multicolumn{1}{r|}{484.00}         & \multicolumn{1}{r|}{2085.30}                                                       & \multicolumn{1}{r|}{454}            & 1955.360                                                                           \\ \hline
+\multicolumn{1}{|r|}{0.75}                                                                                   & \multicolumn{1}{r|}{1207.70}        & \multicolumn{1}{r|}{4218.83}                                                       & \multicolumn{1}{r|}{1003}           & 3519.263                                                                           \\ \hline
+\multicolumn{5}{|c|}{$n = 200, a = 6, b = 10, \mu = 5, \sigma = 1$}                                                                                                                                                                                                                                                                                                \\ \hline
+\multicolumn{1}{|r|}{0.00}                                                                                   & \multicolumn{1}{r|}{1.00}           & \multicolumn{1}{r|}{1617.12}                                                       & \multicolumn{1}{r|}{1}              & 1596.253                                                                           \\ \hline
+\multicolumn{1}{|r|}{0.25}                                                                                   & \multicolumn{1}{r|}{3.00}           & \multicolumn{1}{r|}{1610.80}                                                       & \multicolumn{1}{r|}{4}              & 1602.293                                                                           \\ \hline
+\multicolumn{1}{|r|}{0.50}                                                                                   & \multicolumn{1}{r|}{50.00}          & \multicolumn{1}{r|}{2010.32}                                                       & \multicolumn{1}{r|}{56}             & 2037.255                                                                           \\ \hline
+\multicolumn{1}{|r|}{0.75}                                                                                   & \multicolumn{1}{r|}{337.90}         & \multicolumn{1}{r|}{4300.34}                                                       & \multicolumn{1}{r|}{269}            & 3736.664                                                                           \\ \hline
+\end{tabular}
+\end{threeparttable}
+
+\clearpage
+
+\section*{Вывод}
+
+В ходе выполнения работы была промоделирована системы, состоящей из генератора,
+буфера и обслуживающего аппарата с использованием методов протягивания
+модельного времени ($\Delta t$ и событийный). Была рассмотрена зависимость длины
+очереди от параметров системы.
+
